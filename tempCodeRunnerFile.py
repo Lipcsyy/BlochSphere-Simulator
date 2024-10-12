@@ -4,7 +4,13 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHB
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
+from typing import List, Tuple, Dict, TypedDict
+from qubit import Qubit, qubit0, qubit1, qubitPlus, qubitMinus
+from gates import PauliX, PauliY, PauliZ, Gate
 
+#----------------------------------
+
+	
 class BlochSphereSimulator(QMainWindow):
 	def __init__(self):
 		super().__init__()
@@ -19,11 +25,9 @@ class BlochSphereSimulator(QMainWindow):
 		self.figure = Figure(figsize=(10, 10))
 		self.canvas = FigureCanvas(self.figure)
 		layout.addWidget(self.canvas)
-
+		#Ploting out the Block Sphere
 		self.plot_bloch_sphere()
-		theta, phi = self.getAnglesForQubit()
-		x, y, z = self.transformAnglesToSphereCoordinates(theta, phi)
-		self.drawQuiver(x, y, z)
+		self.applyGates(qubit0, [PauliX(np.pi/4), PauliZ(np.pi/4)])
 		self.ax = None
 
 	def plot_bloch_sphere(self):
@@ -58,9 +62,7 @@ class BlochSphereSimulator(QMainWindow):
 		self.ax.yaxis.pane.set_edgecolor('none')
 		self.ax.zaxis.pane.set_edgecolor('none')
 	
-		
   		#Draw the sphere 
-
 		#This creates a grid for the sphere -> it means that we are going to have 20 points in the theta direction and 10 points in the phi direction
 		u, v = np.mgrid[0:2*np.pi:50j, 0:np.pi:25j]
 		x = np.cos(u)*np.sin(v)
@@ -86,54 +88,91 @@ class BlochSphereSimulator(QMainWindow):
 		self.ax.set_zlabel("Z")
 
 		self.canvas.draw()
-
-	def apply_gate(self):
-		# Implement gate application logic here
-		pass
-
-	def apply_custom_unitary(self):
-		# Implement custom unitary application logic here
-		pass
- 
-	def getAnglesForQubit(self):
 		
-		#|1>
-		complexA = {'Re': 1, 'Im': 0}
-		complexB = {'Re': 0, 'Im': 0}
-		
-		phi = 0
-		#If the real part of complexA is 0, it means that the it will be |0> so the tangent part is positive infinity
-		if (complexA['Re'] == 0):
-			phi = np.pi/2
-		elif (complexB['Re'] == 0):
-			phi = np.pi
-		else:
-			phi = np.arctan(complexB['Im']/complexB['Re']) - np.arctan(complexA['Im']/complexA['Re'])
-
-		theta = np.arcsin(np.sqrt(complexB['Re']**2 + complexB['Im']**2))
-
-		return theta, phi
-	
-	def drawQuiver(self, x, y, z):
-		self.ax.quiver(0,0,0,x,y,z, color='r', arrow_length_ratio=0.1)
+	def drawQuiver(self, x, y, z, color: str):
+		self.ax.quiver(0,0,0,x,y,z, color=color, arrow_length_ratio=0.1)
 		self.canvas.draw()
 
-	def transformAnglesToSphereCoordinates(self, theta, phi):
-     
-		#Transform the angles to the sphere
-  
-		#We need to transform the angles to the sphere -> we need to subtract the phi by 90 degrees
-  
-		print("theta, phi: ", theta, phi)
-		x = np.cos(phi) * np.cos(theta)
-		y = np.cos(phi) * np.sin(theta)
-		z = np.sin(phi)
-  
-		print("x, y, z: ", x, y, z)
-		return x, y, z
+	def draw_great_circle_arc(self, arc_points):
+		arc_array = np.array(arc_points)
+		arc_array = arc_array / np.linalg.norm(arc_array, axis=1)[:, np.newaxis]
+		self.ax.plot(arc_array[:, 0], arc_array[:, 1], arc_array[:, 2], color='b', linewidth=2)
+		self.canvas.draw()
+	
+	def drawQubit(self, qubit: Qubit, color: str):
+		theta, phi = qubit.getAnglesForQubit()
+		x, y, z = self.transformAnglesToSphereCoordinates(theta, phi)
+		self.drawQuiver(x, y, z, color)
+ 
+	def applyGates(self, qubit: Qubit, gates: List[Gate]):
+		#Draw the initial qubit
+		self.drawQubit(qubit, 'r')
+		for gate in gates:
+			
+			#Get the qubit's coordinates before applying the gate -> Copy of the qubit
+			previous_qubit = qubit
+			
+			#Apply the gate
+			qubit = gate.apply(qubit)
    
-		
+			#Draw the qubit after the gate
+			self.drawQubit(qubit, 'b')
 
+			#Draw the arc for the gate
+			arc_points = gate.getArcPointsForRotation(self.getXYZForQubit(previous_qubit), self.getXYZForQubit(qubit))
+			self.draw_great_circle_arc(arc_points)
+
+	def drawArcForGates(self, gates: List[Gate]):
+		pass
+
+#----------------------------------
+
+#--------HELPER FUNCTIONS----------
+
+#----------------------------------
+
+def getArcPointsForSpecificAxis(t, start, end, axis, num_points=100):
+    start = np.array(start)
+    end = np.array(end)
+    
+    # Normalize start and end points
+    start = start / np.linalg.norm(start)
+    end = end / np.linalg.norm(end)
+    
+    # Calculate the angle between start and end
+    angle = np.arccos(np.dot(start, end))
+    
+    arc_points = []
+    for t_i in t:
+        if axis == 'X':
+            rotation_matrix = np.array([
+                [1, 0, 0],
+                [0, np.cos(angle * t_i), -np.sin(angle * t_i)],
+                [0, np.sin(angle * t_i), np.cos(angle * t_i)]
+            ])
+        elif axis == 'Y':
+            rotation_matrix = np.array([
+                [np.cos(angle * t_i), 0, np.sin(angle * t_i)],
+                [0, 1, 0],
+                [-np.sin(angle * t_i), 0, np.cos(angle * t_i)]
+            ])
+        elif axis == 'Z':
+            rotation_matrix = np.array([
+                [np.cos(angle * t_i), -np.sin(angle * t_i), 0],
+                [np.sin(angle * t_i), np.cos(angle * t_i), 0],
+                [0, 0, 1]
+            ])
+        else:
+            raise ValueError("Invalid axis. Must be 'X', 'Y', or 'Z'.")
+        
+        point = rotation_matrix @ start
+        arc_points.append(tuple(point))
+    
+    return arc_points
+   
+
+
+ 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_window = BlochSphereSimulator()

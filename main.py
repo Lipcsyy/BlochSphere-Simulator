@@ -5,167 +5,12 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from typing import List, Tuple, Dict, TypedDict
+from qubit import Qubit, qubit0, qubit1, qubitPlus, qubitMinus
+from gates import PauliX, PauliY, PauliZ, Gate, Hadamard
 
-class ComplexNumber(TypedDict):
-    Re: float
-    Im: float
+#----------------------------------
 
-class Qubit():
-	def __init__(self, alfa: ComplexNumber, beta: ComplexNumber):
-		self.alfa = alfa
-		self.beta = beta
-    
-	def getAnglesForQubit(self) -> Tuple[float, float]: 
-		theta = 0
-		phi = 0
-		#If the real part of complexA is 0, it means that the it will be |0> so the tangent part is positive infinity
-		if (self.alfa['Re'] == 0):
-			theta = np.pi
-			phi = 0
-		elif (self.beta['Re'] == 0):
-			theta = 0
-			phi = 0
-		else:
-			theta = 2*np.arcsin(np.sqrt(self.beta['Re']**2 + self.beta['Im']**2))
-			phi = np.arctan(self.beta['Im']/self.beta['Re']) - np.arctan(self.alfa['Im']/self.alfa['Re'])
-
-		print("Qubit: ", self.alfa['Re'], "+", self.alfa['Im'], "i * |0> + ", self.beta['Re'], "+", self.beta['Im'], "i * |1>")
-		print("theta: ", theta * 180 / np.pi)
-		print("phi: ", phi * 180 / np.pi)
-
-		return theta, phi
 	
-	def __matmul__(self, other):
-		if isinstance(other, np.ndarray):
-			if other.shape != (2, 2):
-				raise ValueError("Matrix must be 2x2 for qubit operations")
-			
-			# Convert qubit state to numpy array
-			state_np = np.array([
-				self.alfa['Re'] + 1j * self.alfa['Im'],
-				self.beta['Re'] + 1j * self.beta['Im']
-			])
-
-			# Perform matrix multiplication
-			result = state_np @ other  # Changed the order here
-
-			# Convert result back to ComplexNumbers
-			new_alfa = {'Re': result[0].real, 'Im': result[0].imag}
-			new_beta = {'Re': result[1].real, 'Im': result[1].imag}
-			return Qubit(new_alfa, new_beta)
-		else:
-			raise TypeError("Unsupported operand type for @. Expected numpy array.")
-
-	def __rmatmul__(self, other):
-		raise TypeError("Matrix multiplication with Qubit must have Qubit as the left operand")
-
-	def __str__(self):
-		return f"({self.alfa['Re']} + {self.alfa['Im']}i)|0> + ({self.beta['Re']} + {self.beta['Im']}i)|1>"
-		
-    
-class PauliX():			
-	def apply(self, qubit: Qubit):
-		theta = np.pi
-		matrix = np.array([
-			[np.cos(theta/2), -1j * np.sin(theta/2)],
-			[-1j * np.sin(theta/2), np.cos(theta/2)]
-		], dtype=np.complex128)
-		
-		# Handle numerical precision for cos(π/2)
-		matrix = np.round(matrix, decimals=10)
-		
-		new_qubit: Qubit = qubit @ matrix
-
-		return new_qubit
-
-	def getArcPointsForRotation(self, start: Tuple[float, float, float], end: Tuple[float, float, float], num_points: int = 100):
-		start = np.array(start)
-		end = np.array(end)
-
-		# For Pauli X rotation, we rotate around the X-axis
-		# The X coordinate remains constant, while Y and Z change
-		t = np.linspace(0, 1, num_points)
-     
-		
-		# Normalize start and end points
-		start = start / np.linalg.norm(start)
-		end = end / np.linalg.norm(end)
-		
-		# Calculate the angle between start and end
-		angle = np.arccos(np.dot(start, end))
-		
-		arc_points = []
- 
-		for t_i in t:
-			rotation_matrix = np.array([
-				[1, 0, 0],
-				[0, np.cos(angle * t_i), -np.sin(angle * t_i)],
-				[0, np.sin(angle * t_i), np.cos(angle * t_i)]
-			])
-			point = rotation_matrix @ start
-			arc_points.append(tuple(point))
-        
-		return arc_points
-
-class PauliY():
-	def apply(self, qubit: Qubit):
-		theta = np.pi
-		matrix = np.array([
-			[np.cos(theta/2), -np.sin(theta/2)],
-			[np.sin(theta/2), np.cos(theta/2)]
-		], dtype=np.complex128)
-		
-		# Handle numerical precision for cos(π/2)
-		matrix = np.round(matrix, decimals=10)
-		
-		new_qubit: Qubit = qubit @ matrix
-
-		return new_qubit
-    
-	def getArcPointsForRotation(self, start: Tuple[float, float, float], end: Tuple[float, float, float], num_points: int = 100):
-		start = np.array(start)
-		end = np.array(end)
-
-		# For Pauli Y rotation, we rotate around the Y-axis
-		# The Y coordinate remains constant, while X and Z change
-		t = np.linspace(0, 1, num_points)
-		
-		# Normalize start and end points
-		start = start / np.linalg.norm(start)
-		end = end / np.linalg.norm(end)
-		
-		# Calculate the angle between start and end
-		angle = np.arccos(np.dot(start, end))
-		
-		arc_points = []
-		
-		for t_i in t:
-			rotation_matrix = np.array([
-                [np.cos(angle * t_i), 0, np.sin(angle * t_i)],
-                [0, 1, 0],
-                [-np.sin(angle * t_i), 0, np.cos(angle * t_i)]
-            ])
-			
-		point = rotation_matrix @ start
-		arc_points.append(tuple(point))
-			
-		return arc_points
-		
-        
-        
-class PauliZ():
-    def apply(self, qubit: Qubit):
-        theta = np.pi
-        matrix = np.array([
-            [np.cos(theta/2), -np.sin(theta/2)],
-            [np.sin(theta/2), np.cos(theta/2)]
-        ], dtype=np.complex128)
-        
-        # Handle numerical precision for cos(π/2)
-        matrix = np.round(matrix, decimals=10)
-        
-
-
 class BlochSphereSimulator(QMainWindow):
 	def __init__(self):
 		super().__init__()
@@ -182,26 +27,7 @@ class BlochSphereSimulator(QMainWindow):
 		layout.addWidget(self.canvas)
 		#Ploting out the Block Sphere
 		self.plot_bloch_sphere()
-
-		# |0>
-		qubit1: Qubit = Qubit({'Re': 1, 'Im': 0}, {'Re': 0, 'Im': 0})
-		self.drawQubit(qubit1, 'r')
-		
-		# |0> -> |1>
-		gate = PauliX()
-		qubit2 = gate.apply(qubit1)
-		self.drawQubit(qubit2, 'g')
-  
-		qubits = [qubit1, qubit2]
-		x1, y1, z1 = self.getXYZForQubit(qubits[0])	
-		x2, y2, z2 = self.getXYZForQubit(qubits[1])
-
-		print("x1, y1, z1: ", x1, y1, z1)
-		print("x2, y2, z2: ", x2, y2, z2)
-  
-		arc_points = gate.getArcPointsForRotation((x1, y1, z1), (x2, y2, z2))
-		self.draw_great_circle_arc(arc_points)
-  
+		self.applyGates(qubit0, [PauliX(np.pi/4), PauliZ(np.pi/4), Hadamard()])
 		self.ax = None
 
 	def plot_bloch_sphere(self):
@@ -267,82 +93,36 @@ class BlochSphereSimulator(QMainWindow):
 		self.ax.quiver(0,0,0,x,y,z, color=color, arrow_length_ratio=0.1)
 		self.canvas.draw()
 
-	def transformAnglesToSphereCoordinates(self, theta, phi):
-		#The calculated theta angle is good, but we need to transform it by -90 degrees to match the Bloch Sphere
-  
-		x = np.cos(phi) * np.sin(theta)
-		y = np.sin(phi) * np.sin(theta)
-		z = np.cos(theta)
-
-		#Round the x, y, z to 10 decimal places
-		x = round(x, 10)
-		y = round(y, 10)
-		z = round(z, 10)
-  
-		return x, y, z
-
-	def getXYZForQubit(self, qubit: Qubit):
-		theta, phi = qubit.getAnglesForQubit()
-		x, y, z = self.transformAnglesToSphereCoordinates(theta, phi)
-		return x, y, z
- 
 	def draw_great_circle_arc(self, arc_points):
 		arc_array = np.array(arc_points)
+		arc_array = arc_array / np.linalg.norm(arc_array, axis=1)[:, np.newaxis]
 		self.ax.plot(arc_array[:, 0], arc_array[:, 1], arc_array[:, 2], color='b', linewidth=2)
 		self.canvas.draw()
 	
-
 	def drawQubit(self, qubit: Qubit, color: str):
 		theta, phi = qubit.getAnglesForQubit()
-		x, y, z = self.transformAnglesToSphereCoordinates(theta, phi)
+		x, y, z = qubit.transformAnglesToSphereCoordinates(theta, phi)
 		self.drawQuiver(x, y, z, color)
+ 
+	def applyGates(self, qubit: Qubit, gates: List[Gate]):
+		#Draw the initial qubit
+		self.drawQubit(qubit, 'r')
+		final_qubit = qubit
+		for gate in gates:
+			#Get the qubit's coordinates before applying the gate -> Copy of the qubit
+			previous_qubit = qubit
+			
+			#Apply the gate
+			qubit = gate.apply(qubit)
+			final_qubit = qubit
 
+			#Draw the arc for the gate
+			arc_points = gate.getArcPointsForRotation(previous_qubit.getXYZ(), qubit.getXYZ())
+			self.draw_great_circle_arc(arc_points)
 
-#----------------------------------
+		#Draw the final qubit
+		self.drawQubit(final_qubit, 'b')
 
-#--------HELPER FUNCTIONS----------
-
-#----------------------------------
-
-def getArcPointsForSpecificAxis(t, start, end, axis, num_points=100):
-    start = np.array(start)
-    end = np.array(end)
-    
-    # Normalize start and end points
-    start = start / np.linalg.norm(start)
-    end = end / np.linalg.norm(end)
-    
-    # Calculate the angle between start and end
-    angle = np.arccos(np.dot(start, end))
-    
-    arc_points = []
-    for t_i in t:
-        if axis == 'X':
-            rotation_matrix = np.array([
-                [1, 0, 0],
-                [0, np.cos(angle * t_i), -np.sin(angle * t_i)],
-                [0, np.sin(angle * t_i), np.cos(angle * t_i)]
-            ])
-        elif axis == 'Y':
-            rotation_matrix = np.array([
-                [np.cos(angle * t_i), 0, np.sin(angle * t_i)],
-                [0, 1, 0],
-                [-np.sin(angle * t_i), 0, np.cos(angle * t_i)]
-            ])
-        elif axis == 'Z':
-            rotation_matrix = np.array([
-                [np.cos(angle * t_i), -np.sin(angle * t_i), 0],
-                [np.sin(angle * t_i), np.cos(angle * t_i), 0],
-                [0, 0, 1]
-            ])
-        else:
-            raise ValueError("Invalid axis. Must be 'X', 'Y', or 'Z'.")
-        
-        point = rotation_matrix @ start
-        arc_points.append(tuple(point))
-    
-    return arc_points
-   
 
 
  
