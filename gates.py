@@ -176,7 +176,7 @@ class Hadamard(Gate):
 		
 		# For Hadamard, we rotate around the y=x axis in the x-z plane
 		# This is equivalent to rotating around the [1, 1, 0] axis
-		axis = np.array([1, 1, 0]) / np.sqrt(2)
+		axis = np.array([1, 0, 1]) / np.sqrt(2)
 		
 		# The rotation angle for Hadamard is always pi
 		angle = np.pi
@@ -189,9 +189,9 @@ class Hadamard(Gate):
 			c = np.cos(angle * t_i)
 			s = np.sin(angle * t_i)
 			rotation_matrix = np.array([
-				[c, -s/np.sqrt(2), s/np.sqrt(2)],
-				[s/np.sqrt(2), (1+c)/2, (1-c)/2],
-				[-s/np.sqrt(2), (1-c)/2, (1+c)/2]
+				[(1+c)/2, -s/np.sqrt(2), (1-c)/2],
+				[s/np.sqrt(2), c, -s/np.sqrt(2)],
+				[(1-c)/2, s/np.sqrt(2), (1+c)/2]
 			])
 			point = rotation_matrix @ start
 			arc_points.append(tuple(point))

@@ -8,6 +8,7 @@ from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from typing import List, Tuple, Dict, TypedDict
 
+
 class Qubit():
     def __init__(self, alfa: ComplexNumber, beta: ComplexNumber):
         self.alfa = alfa
@@ -102,12 +103,14 @@ class Qubit():
     
     def __str__(self):
         return f"({self.alfa['Re']} + {self.alfa['Im']}i)|0> + ({self.beta['Re']} + {self.beta['Im']}i)|1>"
-    
+
+    def getState(self):
+        return self.alfa, self.beta
 
 
 qubit0 = Qubit({'Re': 1, 'Im': 0}, {'Re': 0, 'Im': 0})
 qubit1 = Qubit({'Re': 0, 'Im': 0}, {'Re': 1, 'Im': 0})
 
-qubitPlus = (qubit0 + qubit1) / np.sqrt(2)
-qubitMinus = (qubit0 - qubit1) / np.sqrt(2)
+qubitPlus = Qubit({'Re': 1/np.sqrt(2), 'Im': 0}, {'Re': 1/np.sqrt(2), 'Im': 0})
+qubitMinus = Qubit({'Re': 1/np.sqrt(2), 'Im': 0}, {'Re': -1/np.sqrt(2), 'Im': 0})
 

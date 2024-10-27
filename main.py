@@ -27,7 +27,10 @@ class BlochSphereSimulator(QMainWindow):
 		layout.addWidget(self.canvas)
 		#Ploting out the Block Sphere
 		self.plot_bloch_sphere()
-		self.applyGates(qubit0, [PauliX(np.pi/4), PauliZ(np.pi/4), Hadamard()])
+		self.applyGates(qubit0, [Hadamard()])  # Should rotate from |0⟩ to |+⟩
+		self.applyGates(qubit1, [Hadamard()])  # Should rotate from |1⟩ to |-⟩
+		self.applyGates(qubitPlus, [Hadamard()])  # Should rotate from |+⟩ to |0⟩
+		self.applyGates(qubitMinus, [Hadamard()])  # Should rotate from |-⟩ to |1⟩
 		self.ax = None
 
 	def plot_bloch_sphere(self):
@@ -117,6 +120,8 @@ class BlochSphereSimulator(QMainWindow):
 			final_qubit = qubit
 
 			#Draw the arc for the gate
+			print(previous_qubit.getXYZ())
+			print(qubit.getXYZ())
 			arc_points = gate.getArcPointsForRotation(previous_qubit.getXYZ(), qubit.getXYZ())
 			self.draw_great_circle_arc(arc_points)
 
