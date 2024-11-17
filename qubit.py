@@ -48,7 +48,6 @@ class Qubit():
         return x, y, z
 
     def transformAnglesToSphereCoordinates(self, theta, phi):
-        # The calculated theta angle is good, but we need to transform it by -90 degrees to match the Bloch Sphere
         x = np.cos(phi) * np.sin(theta)
         y = np.sin(phi) * np.sin(theta)
         z = np.cos(theta)

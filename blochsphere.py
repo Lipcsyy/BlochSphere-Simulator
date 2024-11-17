@@ -35,6 +35,9 @@ class BlochSpherePlot(QMainWindow):
 
         # Set the default gates to an empty list
         self.gates = []
+        # Adding history
+        self.state_history = [(qubit0, [])]  # List of (state, gates) tuples
+        self.current_state_index = 0
 
     def plot_bloch_sphere(self):
         self.figure.clear()
@@ -187,6 +190,26 @@ class BlochSpherePlot(QMainWindow):
         self.initialState = qubit
         self.drawQubit(self.initialState, 'r')
         self.gates = []
+        self.state_history = [(qubit, [])]
 
     def addGate(self, gate: Gate):
         self.gates.append(gate)
+        self.state_history = self.state_history[:self.current_state_index + 1]
+        self.state_history.append((self.initialState, self.gates.copy()))
+        self.current_state_index += 1
+        
+    def undo(self):
+        if self.current_state_index > 0:
+            self.current_state_index -= 1
+            self.initialState, self.gates = self.state_history[self.current_state_index]
+            self.figure.clear()
+            self.plot_bloch_sphere()
+            self.applyAddedGates()
+
+    def redo(self):
+        if self.current_state_index < len(self.state_history) - 1:
+            self.current_state_index += 1
+            self.initialState, self.gates = self.state_history[self.current_state_index]
+            self.figure.clear()
+            self.plot_bloch_sphere()
+            self.applyAddedGates()

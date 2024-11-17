@@ -8,7 +8,6 @@ Created on Sun Oct 27 11:48:44 2024
 from PyQt5.QtWidgets import QApplication
 import sys
 from BlochSphereGUI import BlochSphereGUI
-from blochsphere import BlochSpherePlot
 
 
 def main():
